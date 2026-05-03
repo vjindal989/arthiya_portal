@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("ADMIN")
+  firmName  String?
+  mandiName String?
+  address   String?
+  mobile    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Settings {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+model Farmer {
+  id          String   @id @default(cuid())
+  name        String
+  nameHindi   String?
+  fatherName  String?
+  village     String
+  tehsil      String?
+  district    String   @default("Haryana")
+  mobile      String?
+  aadhaar     String?
+  bankAccount String?
+  bankName    String?
+  ifscCode    String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lots          Lot[]
+  loans         Loan[]
+  ledgerEntries LedgerEntry[]
+}
+
+model Trader {
+  id          String   @id @default(cuid())
+  name        String
+  firmName    String?
+  mobile      String?
+  licenseNo   String?
+  address     String?
+  bankAccount String?
+  bankName    String?
+  ifscCode    String?
+  creditLimit Float?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchases     LotSale[]
+  ledgerEntries LedgerEntry[]
+}
+
+model Lot {
+  id           String   @id @default(cuid())
+  lotNumber    String   @unique
+  date         DateTime @default(now())
+  season       String
+  farmerId     String
+  cropType     String
+  variety      String?
+  grossWeight  Float
+  deductions   Float    @default(0)
+  netWeight    Float
+  noOfBags     Int
+  bagType      String   @default("Gunny")
+  qualityGrade String   @default("FAQ")
+  arhatiyaMode String   @default("KUTCHA")
+  status       String   @default("PENDING")
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  farmer     Farmer      @relation(fields: [farmerId], references: [id])
+  sale       LotSale?
+  settlement Settlement?
+}
+
+model LotSale {
+  id              String    @id @default(cuid())
+  lotId           String    @unique
+  traderId        String
+  ratePerQuintal  Float
+  grossAmount     Float
+  marketFee       Float
+  rdf             Float
+  commission      Float
+  labourCharges   Float     @default(0)
+  gunnyBagCharges Float     @default(0)
+  otherDeductions Float     @default(0)
+  netFarmerAmount Float
+  buyerTotalAmount Float
+  buyerPaid       Boolean   @default(false)
+  buyerPaidDate   DateTime?
+  saleDate        DateTime  @default(now())
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  lot    Lot    @relation(fields: [lotId], references: [id])
+  trader Trader @relation(fields: [traderId], references: [id])
+}
+
+model Settlement {
+  id                String    @id @default(cuid())
+  lotId             String    @unique
+  grossFarmerAmount Float
+  loanDeductions    Float     @default(0)
+  otherDeductions   Float     @default(0)
+  netPayable        Float
+  paymentMethod     String?
+  paymentRef        String?
+  paidOn            DateTime?
+  createdAt         DateTime  @default(now())
+
+  lot Lot @relation(fields: [lotId], references: [id])
+}
+
+model Loan {
+  id        String   @id @default(cuid())
+  farmerId  String
+  amount    Float
+  purpose   String?
+  givenOn   DateTime @default(now())
+  recovered Float    @default(0)
+  balance   Float
+  notes     String?
+  status    String   @default("OUTSTANDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farmer   Farmer        @relation(fields: [farmerId], references: [id])
+  payments LoanPayment[]
+}
+
+model LoanPayment {
+  id        String   @id @default(cuid())
+  loanId    String
+  amount    Float
+  paidOn    DateTime @default(now())
+  lotId     String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  loan Loan @relation(fields: [loanId], references: [id])
+}
+
+model LedgerEntry {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  type        String
+  farmerId    String?
+  traderId    String?
+  description String
+  debit       Float    @default(0)
+  credit      Float    @default(0)
+  balance     Float    @default(0)
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  farmer Farmer? @relation(fields: [farmerId], references: [id])
+  trader Trader? @relation(fields: [traderId], references: [id])
+}
