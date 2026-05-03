@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { sendResetEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   const { email } = await request.json();
@@ -8,9 +9,8 @@ export async function POST(request: NextRequest) {
 
   const user = await prisma.user.findUnique({ where: { email } });
   // Always return success to avoid email enumeration
-  if (!user) return NextResponse.json({ resetUrl: null, message: "If that email exists, a link was generated." });
+  if (!user) return NextResponse.json({ ok: true });
 
-  // Delete any existing tokens for this email
   await prisma.passwordResetToken.deleteMany({ where: { email } });
 
   const token = randomBytes(32).toString("hex");
@@ -21,5 +21,12 @@ export async function POST(request: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL ?? request.nextUrl.origin;
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
-  return NextResponse.json({ resetUrl });
+  try {
+    await sendResetEmail(email, resetUrl);
+  } catch (err) {
+    console.error("Failed to send reset email:", err);
+    return NextResponse.json({ error: "Failed to send email. Check RESEND_API_KEY." }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
