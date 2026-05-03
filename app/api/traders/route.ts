@@ -1,25 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+async function getUserId() {
+  const session = await getServerSession(authOptions);
+  return (session?.user as any)?.id as string | undefined;
+}
+
 export async function GET(request: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? "";
 
   const traders = await prisma.trader.findMany({
-    where: search
-      ? {
-          OR: [
-            { name: { contains: search } },
-            { firmName: { contains: search } },
-            { mobile: { contains: search } },
-          ],
-        }
-      : undefined,
+    where: {
+      userId,
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { firmName: { contains: search } },
+              { mobile: { contains: search } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { name: "asc" },
     include: {
-      purchases: {
-        select: { buyerTotalAmount: true },
-      },
+      purchases: { select: { buyerTotalAmount: true } },
     },
   });
 
@@ -33,10 +44,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await request.json();
 
   const trader = await prisma.trader.create({
     data: {
+      userId,
       name: body.name,
       firmName: body.firmName,
       mobile: body.mobile,

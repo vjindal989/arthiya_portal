@@ -22,6 +22,8 @@ model User {
 
   sessions Session[]
   accounts Account[]
+  farmers  Farmer[]
+  traders  Trader[]
 }
 
 model Account {
@@ -76,6 +78,7 @@ model Settings {
 
 model Farmer {
   id          String   @id @default(cuid())
+  userId      String   @default("")
   name        String
   nameHindi   String?
   fatherName  String?
@@ -95,10 +98,12 @@ model Farmer {
   lots          Lot[]
   loans         Loan[]
   ledgerEntries LedgerEntry[]
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Trader {
   id          String   @id @default(cuid())
+  userId      String   @default("")
   name        String
   firmName    String?
   mobile      String?
@@ -114,6 +119,7 @@ model Trader {
 
   purchases     LotSale[]
   ledgerEntries LedgerEntry[]
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Lot {

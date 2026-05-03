@@ -62,12 +62,14 @@ export const authOptions = {
     },
     async jwt({ token, user, account }: { token: any; user: any; account: any }) {
       if (user) {
+        token.id = user.id;
         token.firmName = user.firmName;
         token.mandiName = user.mandiName;
       }
       if (account?.provider === "google" && token.email) {
         const dbUser = await prisma.user.findUnique({ where: { email: token.email } });
         if (dbUser) {
+          token.id = dbUser.id;
           token.firmName = dbUser.firmName;
           token.mandiName = dbUser.mandiName;
         }
@@ -76,6 +78,7 @@ export const authOptions = {
     },
     async session({ session, token }: { session: any; token: any }) {
       if (token) {
+        session.user.id = token.id;
         session.user.firmName = token.firmName;
         session.user.mandiName = token.mandiName;
       }

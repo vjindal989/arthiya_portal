@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+async function getUserId() {
+  const session = await getServerSession(authOptions);
+  return (session?.user as any)?.id as string | undefined;
+}
+
 export async function GET(request: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const farmerId = searchParams.get("farmerId");
 
   const loans = await prisma.loan.findMany({
     where: {
+      farmer: { userId },
       ...(status ? { status } : {}),
       ...(farmerId ? { farmerId } : {}),
     },
@@ -21,6 +32,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await request.json();
   const amount = Number(body.amount);
 
@@ -37,7 +51,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Create ledger entry
   await prisma.ledgerEntry.create({
     data: {
       type: "LOAN",

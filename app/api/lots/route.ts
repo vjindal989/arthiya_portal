@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateLotNumber } from "@/lib/calc";
 
+async function getUserId() {
+  const session = await getServerSession(authOptions);
+  return (session?.user as any)?.id as string | undefined;
+}
+
 export async function GET(request: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const dateFilter = searchParams.get("date");
@@ -15,7 +25,7 @@ export async function GET(request: NextRequest) {
   const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 7);
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { farmer: { userId } };
 
   if (status) where.status = status;
   if (farmerId) where.farmerId = farmerId;
@@ -39,10 +49,16 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await request.json();
 
-  // Get mandi prefix from settings
-  const mandiCodeSetting = await prisma.settings.findUnique({ where: { key: "mandi_code" } });
+  // Get mandi prefix from user-scoped settings, fall back to global
+  const mandiCodeSetting = await prisma.settings.findFirst({
+    where: { OR: [{ key: `${userId}:mandi_code` }, { key: "mandi_code" }] },
+    orderBy: { key: "desc" },
+  });
   const prefix = mandiCodeSetting?.value ?? "MND";
   const lotNumber = generateLotNumber(prefix, body.date ? new Date(body.date) : undefined);
 
