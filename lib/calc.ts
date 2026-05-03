@@ -36,7 +36,8 @@ export function calculateCharges(input: ChargeInput): ChargeResult {
     otherDeductions = 0,
   } = input;
 
-  const grossAmount = round2(netWeight * ratePerQuintal);
+  const netWeightQtl = netWeight / 100; // convert kg → quintals
+  const grossAmount = round2(netWeightQtl * ratePerQuintal);
   const marketFee = round2(grossAmount * (marketFeeRate / 100));
   const rdf = round2(grossAmount * (rdfRate / 100));
   const commission = round2(grossAmount * (commissionRate / 100));
