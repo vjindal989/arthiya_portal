@@ -1,14 +1,16 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazily instantiated so the build doesn't fail when RESEND_API_KEY is not set
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
-// Use your verified Resend domain in production; onboarding@resend.dev works only to your own email
-const FROM = process.env.RESEND_FROM ?? "onboarding@resend.dev";
+const FROM = () => process.env.RESEND_FROM ?? "onboarding@resend.dev";
 const APP_NAME = "Arhatiya Portal";
 
 export async function sendOtpEmail(email: string, otp: string) {
-  await resend.emails.send({
-    from: FROM,
+  await getResend().emails.send({
+    from: FROM(),
     to: email,
     subject: `${otp} is your ${APP_NAME} verification code`,
     text: `Your ${APP_NAME} verification code is:\n\n${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
@@ -24,8 +26,8 @@ export async function sendOtpEmail(email: string, otp: string) {
 }
 
 export async function sendResetEmail(email: string, resetUrl: string) {
-  await resend.emails.send({
-    from: FROM,
+  await getResend().emails.send({
+    from: FROM(),
     to: email,
     subject: `Reset your ${APP_NAME} password`,
     text: `Click the link below to reset your password:\n\n${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, ignore this email.`,
