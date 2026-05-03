@@ -41,9 +41,11 @@ export function calculateCharges(input: ChargeInput): ChargeResult {
   const marketFee = round2(grossAmount * (marketFeeRate / 100));
   const rdf = round2(grossAmount * (rdfRate / 100));
   const commission = round2(grossAmount * (commissionRate / 100));
-  const farmerDeductions = round2(commission + labourCharges + gunnyBagCharges + otherDeductions);
+
+  // Commission is charged FROM BUYER (added to buyer total), not deducted from farmer
+  const farmerDeductions = round2(labourCharges + gunnyBagCharges + otherDeductions);
   const netFarmerAmount = round2(grossAmount - farmerDeductions);
-  const buyerTotalAmount = round2(grossAmount + marketFee + rdf);
+  const buyerTotalAmount = round2(grossAmount + marketFee + rdf + commission);
 
   return {
     grossAmount,

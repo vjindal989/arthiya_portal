@@ -440,13 +440,13 @@ export default function LotDetailPage({ params }: { params: Promise<{ id: string
                     <span className="text-right">{formatCurrency(salePreview.marketFee)}</span>
                     <span className="text-muted-foreground">RDF ({settings.rdf_rate ?? 2}%)</span>
                     <span className="text-right">{formatCurrency(salePreview.rdf)}</span>
+                    <span className="text-muted-foreground">Commission / आढ़त ({settings.commission_rate ?? 2.5}%)</span>
+                    <span className="text-right">{formatCurrency(salePreview.commission)}</span>
                     <span className="text-muted-foreground font-medium">Buyer Total</span>
                     <span className="text-right font-bold">{formatCurrency(salePreview.buyerTotalAmount)}</span>
                   </div>
                   <Separator />
                   <div className="grid grid-cols-2 gap-1">
-                    <span className="text-muted-foreground">Commission ({settings.commission_rate ?? 2.5}%)</span>
-                    <span className="text-right">{formatCurrency(salePreview.commission)}</span>
                     <span className="text-muted-foreground">Labour</span>
                     <span className="text-right">{formatCurrency(salePreview.labourCharges)}</span>
                     <span className="text-muted-foreground">Gunny Bag</span>
@@ -472,7 +472,24 @@ export default function LotDetailPage({ params }: { params: Promise<{ id: string
       {lot.sale && (
         <Card>
           <CardHeader>
-            <CardTitle>Sale Details</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Sale Details</CardTitle>
+              {lot.status === "SOLD" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={async () => {
+                    if (!confirm("Delete this sale and revert lot to PENDING?")) return;
+                    const res = await fetch(`/api/lots/${lot.id}/sale`, { method: "DELETE" });
+                    if (res.ok) { toast.success("Sale deleted"); fetchLot(); }
+                    else toast.error("Failed to delete sale");
+                  }}
+                >
+                  Delete Sale
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-2">
@@ -500,15 +517,15 @@ export default function LotDetailPage({ params }: { params: Promise<{ id: string
                 <span className="text-muted-foreground">RDF</span>
                 <span>{formatCurrency(lot.sale.rdf)}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Commission / आढ़त</span>
+                <span>{formatCurrency(lot.sale.commission)}</span>
+              </div>
               <div className="flex justify-between font-semibold">
                 <span>Buyer Total</span>
                 <span>{formatCurrency(lot.sale.buyerTotalAmount)}</span>
               </div>
               <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Commission</span>
-                <span>{formatCurrency(lot.sale.commission)}</span>
-              </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Labour</span>
                 <span>{formatCurrency(lot.sale.labourCharges)}</span>
@@ -669,7 +686,6 @@ export default function LotDetailPage({ params }: { params: Promise<{ id: string
               <Separator className="my-3" />
               <div className="space-y-1">
                 <div className="flex justify-between"><span>Gross Amount</span><span>{formatCurrency(lot.sale.grossAmount)}</span></div>
-                <div className="flex justify-between"><span>Commission</span><span>- {formatCurrency(lot.sale.commission)}</span></div>
                 <div className="flex justify-between"><span>Labour</span><span>- {formatCurrency(lot.sale.labourCharges)}</span></div>
               </div>
             </>

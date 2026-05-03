@@ -77,3 +77,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   return NextResponse.json(sale, { status: 201 });
 }
+
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+  const { id } = await params;
+
+  const lot = await prisma.lot.findUnique({ where: { id }, include: { sale: true } });
+  if (!lot) return NextResponse.json({ error: "Lot not found" }, { status: 404 });
+  if (lot.status !== "SOLD") {
+    return NextResponse.json({ error: "Only SOLD lots can have their sale deleted" }, { status: 400 });
+  }
+
+  // Delete related ledger entries, then the sale, then reset lot status
+  await prisma.ledgerEntry.deleteMany({ where: { referenceId: id } });
+  await prisma.lotSale.delete({ where: { lotId: id } });
+  await prisma.lot.update({ where: { id }, data: { status: "PENDING" } });
+
+  return NextResponse.json({ ok: true });
+}
